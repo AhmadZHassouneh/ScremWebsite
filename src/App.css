@@ -1,0 +1,488 @@
+/* ===== HEADER ===== */
+.app-header {
+  text-align: center;
+  padding: 30px 0;
+  border-bottom: 2px solid var(--primary);
+  margin-bottom: 30px;
+}
+
+.app-header h1 {
+  font-size: 2.5rem;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+.app-header p {
+  color: var(--text-muted);
+  margin-top: 5px;
+  font-size: 1rem;
+}
+
+/* ===== TABS ===== */
+.tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 25px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  padding: 12px 24px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+  background: var(--bg-card);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.card h2 {
+  color: var(--primary);
+  margin-bottom: 16px;
+  font-size: 1.3rem;
+}
+
+/* ===== TABLES ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  background: var(--bg-input);
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+tr:hover {
+  background: var(--bg-card-hover);
+}
+
+.rank-1 { color: var(--gold); font-weight: bold; }
+.rank-2 { color: var(--silver); font-weight: bold; }
+.rank-3 { color: var(--bronze); font-weight: bold; }
+
+/* ===== INPUTS ===== */
+input[type="text"],
+input[type="number"],
+select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+input[type="number"] {
+  width: 70px;
+  text-align: center;
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #0a0a0a;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: var(--danger-hover);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+.btn-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ===== TEAM MANAGEMENT ===== */
+.teams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.team-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.2s;
+}
+
+.team-card:hover {
+  border-color: var(--primary);
+}
+
+.team-card h3 {
+  color: var(--primary);
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.team-card .team-number {
+  background: var(--primary);
+  color: #0a0a0a;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.player-list {
+  list-style: none;
+}
+
+.player-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-list li:last-child {
+  border-bottom: none;
+}
+
+.player-icon {
+  color: var(--primary);
+  font-size: 0.8rem;
+}
+
+/* ===== MATCH SECTION ===== */
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.match-round {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.match-round label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.match-entry {
+  display: grid;
+  grid-template-columns: 50px 1fr 100px 100px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.match-entry:last-child {
+  border-bottom: none;
+}
+
+.match-position {
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: center;
+  color: var(--primary);
+}
+
+/* ===== POINT SYSTEM ===== */
+.point-system-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.point-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-input);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.point-entry .position-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.point-entry input {
+  width: 60px;
+}
+
+/* ===== OVERALL RANKING ===== */
+.ranking-table {
+  overflow-x: auto;
+}
+
+.total-cell {
+  background: var(--primary);
+  color: #0a0a0a;
+  font-weight: bold;
+  border-radius: 4px;
+  padding: 4px 12px;
+  display: inline-block;
+}
+
+/* ===== MATCH RESULTS ===== */
+.match-tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.match-tab {
+  padding: 8px 16px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.match-tab:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.match-tab.active {
+  background: var(--primary);
+  color: #0a0a0a;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+/* ===== KILL INPUT ===== */
+.kill-inputs {
+  margin-top: 8px;
+}
+
+.kill-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.kill-row label {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.kill-row input {
+  width: 60px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .app-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  .match-entry {
+    grid-template-columns: 40px 1fr 80px 80px;
+  }
+
+  .teams-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== EDIT MODE ===== */
+.inline-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-edit input {
+  flex: 1;
+}
+
+/* ===== ADD FORM ===== */
+.add-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 16px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.add-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.add-form label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* ===== SUMMARY BOXES ===== */
+.summary-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.summary-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.summary-box .value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.summary-box .label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 30px;
+  width: 500px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal h2 {
+  margin-bottom: 20px;
+}
+
+.modal .form-group {
+  margin-bottom: 14px;
+}
+
+.modal .form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}

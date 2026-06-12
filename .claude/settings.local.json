@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(start:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}
