@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { auth } from './services/firebase'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { auth, db } from './services/firebase'
 import './App.css'
 import AuthPage from './components/AuthPage'
 import TeamsPanel from './components/TeamsPanel'
@@ -9,18 +10,7 @@ import RankingPanel from './components/RankingPanel'
 import PointSystemPanel from './components/PointSystemPanel'
 import DesignPanel from './components/DesignPanel'
 import ApiKeyInput from './components/ApiKeyInput'
-import { initialTeams, defaultPointSystem, killPoints } from './data/teams'
-
-const STORAGE_KEY = 'pubg-screm-data'
-const API_KEY_STORAGE = 'pubg-screm-api-key'
-
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch {}
-  return null
-}
+import { defaultPointSystem, killPoints } from './data/teams'
 
 function App() {
   const [user, setUser] = useState(undefined) // undefined = loading, null = not logged in
@@ -70,25 +60,54 @@ function App() {
 }
 
 function MainApp({ user, onLogout }) {
-  const saved = loadData()
+  const uid = user.uid
+  const [dataLoading, setDataLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('ranking')
-  const [teams, setTeams] = useState(saved?.teams || initialTeams)
-  const [pointSystem, setPointSystem] = useState(saved?.pointSystem || defaultPointSystem)
-  const [killPts, setKillPts] = useState(saved?.killPts ?? killPoints)
-  const [matches, setMatches] = useState(saved?.matches || [])
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '')
+  const [teams, setTeams] = useState([])
+  const [pointSystem, setPointSystem] = useState(defaultPointSystem)
+  const [killPts, setKillPts] = useState(killPoints)
+  const [matches, setMatches] = useState([])
+  const [apiKey, setApiKey] = useState('')
+  const initialLoadDone = useRef(false)
 
+  // Load user data from Firestore on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ teams, pointSystem, killPts, matches }))
-  }, [teams, pointSystem, killPts, matches])
-
-  useEffect(() => {
-    if (apiKey) {
-      localStorage.setItem(API_KEY_STORAGE, apiKey)
-    } else {
-      localStorage.removeItem(API_KEY_STORAGE)
+    async function loadFromFirestore() {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid))
+        if (snap.exists()) {
+          const data = snap.data()
+          if (data.teams) setTeams(data.teams)
+          if (data.pointSystem) setPointSystem(data.pointSystem)
+          if (data.killPts != null) setKillPts(data.killPts)
+          if (data.matches) setMatches(data.matches)
+          if (data.apiKey) setApiKey(data.apiKey)
+        }
+      } catch (err) {
+        console.error('Failed to load data from Firestore:', err)
+      } finally {
+        setDataLoading(false)
+        initialLoadDone.current = true
+      }
     }
-  }, [apiKey])
+    loadFromFirestore()
+  }, [uid])
+
+  // Save user data to Firestore whenever it changes
+  const saveTimeout = useRef(null)
+  const saveToFirestore = useCallback((data) => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current)
+    saveTimeout.current = setTimeout(() => {
+      setDoc(doc(db, 'users', uid), data, { merge: true }).catch(err =>
+        console.error('Failed to save data to Firestore:', err)
+      )
+    }, 500)
+  }, [uid])
+
+  useEffect(() => {
+    if (!initialLoadDone.current) return
+    saveToFirestore({ teams, pointSystem, killPts, matches, apiKey })
+  }, [teams, pointSystem, killPts, matches, apiKey, saveToFirestore])
 
   const getPositionPoints = (position) => {
     const entry = pointSystem.find(p => p.position === position)
@@ -127,6 +146,27 @@ function MainApp({ user, onLogout }) {
         total: totalPositionPts + (totalKills * killPts),
       }
     }).sort((a, b) => b.total - a.total)
+  }
+
+  if (dataLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg)',
+      }}>
+        <div style={{
+          width: 40, height: 40,
+          border: '4px solid var(--border)',
+          borderTopColor: 'var(--primary)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
+    )
   }
 
   const tabs = [

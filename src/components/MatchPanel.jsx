@@ -21,33 +21,17 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
   }
 
   const matchTeamFromGroup = (group) => {
-    let bestTeam = null
-    let bestScore = 0
+    // Try to match group's team name against known teams
+    const groupName = (group.teamName || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (!groupName) return null
 
-    teams.forEach(team => {
-      let score = 0
-      group.players.forEach(gp => {
-        team.players.forEach(tp => {
-          const gpLower = gp.name.toLowerCase().replace(/[^a-z0-9]/g, '')
-          const tpLower = tp.toLowerCase().replace(/[^a-z0-9]/g, '')
-          if (gpLower && tpLower && (gpLower.includes(tpLower) || tpLower.includes(gpLower))) {
-            score += 2
-          } else if (gpLower.length > 3 && tpLower.length > 3) {
-            const shorter = gpLower.length < tpLower.length ? gpLower : tpLower
-            const longer = gpLower.length < tpLower.length ? tpLower : gpLower
-            if (longer.includes(shorter.substring(0, Math.min(4, shorter.length)))) {
-              score += 1
-            }
-          }
-        })
-      })
-      if (score > bestScore) {
-        bestScore = score
-        bestTeam = team
+    for (const team of teams) {
+      const teamName = team.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+      if (teamName && (groupName.includes(teamName) || teamName.includes(groupName))) {
+        return team
       }
-    })
-
-    return bestScore > 0 ? bestTeam : null
+    }
+    return null
   }
 
   const buildResultFromGroup = (group, existingResults) => {
@@ -60,14 +44,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
           teamId: bestTeam.id,
           teamName: bestTeam.name,
           position: group.position,
-          kills: bestTeam.players.map(tp => {
-            const match = group.players.find(gp => {
-              const gpLower = gp.name.toLowerCase().replace(/[^a-z0-9]/g, '')
-              const tpLower = tp.toLowerCase().replace(/[^a-z0-9]/g, '')
-              return gpLower.includes(tpLower) || tpLower.includes(gpLower)
-            })
-            return { player: tp, count: match ? match.kills : 0 }
-          }),
+          kills: group.players.map(p => ({ player: p.name, count: p.kills })),
         }
       }
       return null // duplicate
@@ -214,7 +191,6 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
             ...r,
             teamId: newTeam.id,
             teamName: newTeam.name,
-            kills: newTeam.players.map(p => ({ player: p, count: 0 })),
           }
         }),
       }

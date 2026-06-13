@@ -6,10 +6,9 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
-  const [newPlayers, setNewPlayers] = useState(['', '', '', ''])
 
   const handleEditTeam = (team) => {
-    setEditingTeam({ ...team, players: [...team.players] })
+    setEditingTeam({ ...team })
   }
 
   const handleSaveEdit = () => {
@@ -29,32 +28,12 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
     setTeams([...teams, {
       id: newId,
       name: newTeamName.trim(),
-      players: newPlayers.filter(p => p.trim()),
     }])
     setNewTeamName('')
-    setNewPlayers(['', '', '', ''])
     setShowAddForm(false)
   }
 
-  const updateEditPlayer = (index, value) => {
-    const players = [...editingTeam.players]
-    players[index] = value
-    setEditingTeam({ ...editingTeam, players })
-  }
-
-  const addEditPlayer = () => {
-    if (editingTeam.players.length >= 4) return
-    setEditingTeam({ ...editingTeam, players: [...editingTeam.players, ''] })
-  }
-
-  const removeEditPlayer = (index) => {
-    const players = editingTeam.players.filter((_, i) => i !== index)
-    setEditingTeam({ ...editingTeam, players })
-  }
-
   const handleImageTeams = (teamNames) => {
-    // teamNames is an array of strings like ["STG ESP", "HOPEESPORT", ...]
-    // Skip teams that already exist (case-insensitive match)
     const existingNames = teams.map(t => t.name.toLowerCase().trim())
     const newTeams = []
     let nextId = Math.max(0, ...teams.map(t => t.id))
@@ -65,7 +44,6 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
       newTeams.push({
         id: nextId,
         name: name,
-        players: ['Player 1', 'Player 2', 'Player 3', 'Player 4'],
       })
     }
 
@@ -108,35 +86,7 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
                 placeholder="Enter team name"
               />
             </div>
-            {newPlayers.map((p, i) => (
-              <div key={i} className="form-group">
-                <label>Player {i + 1}</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="text"
-                    value={p}
-                    onChange={e => {
-                      const arr = [...newPlayers]
-                      arr[i] = e.target.value
-                      setNewPlayers(arr)
-                    }}
-                    placeholder={`Player ${i + 1} name`}
-                  />
-                  {newPlayers.length > 1 && (
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() => setNewPlayers(newPlayers.filter((_, idx) => idx !== i))}
-                    >
-                      X
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
             <div className="btn-group">
-              <button className="btn btn-sm btn-primary" onClick={() => { if (newPlayers.length < 4) setNewPlayers([...newPlayers, '']) }} disabled={newPlayers.length >= 4}>
-                + Player
-              </button>
               <button className="btn btn-primary" onClick={handleAddTeam}>Save Team</button>
             </div>
           </div>
@@ -156,14 +106,6 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
                 <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTeam(team.id)}>Del</button>
               </span>
             </h3>
-            <ul className="player-list">
-              {team.players.map((player, i) => (
-                <li key={i}>
-                  <span className="player-icon">&#9654;</span>
-                  {player}
-                </li>
-              ))}
-            </ul>
           </div>
         ))}
       </div>
@@ -180,22 +122,7 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
                 onChange={e => setEditingTeam({ ...editingTeam, name: e.target.value })}
               />
             </div>
-            <h3 style={{ color: 'var(--primary)', margin: '16px 0 8px' }}>Players</h3>
-            {editingTeam.players.map((player, i) => (
-              <div key={i} className="form-group" style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type="text"
-                  value={player}
-                  onChange={e => updateEditPlayer(i, e.target.value)}
-                  placeholder={`Player ${i + 1}`}
-                />
-                <button className="btn btn-danger btn-sm" onClick={() => removeEditPlayer(i)}>X</button>
-              </div>
-            ))}
             <div className="btn-group">
-              {editingTeam.players.length < 4 && (
-                <button className="btn btn-sm btn-primary" onClick={addEditPlayer}>+ Player</button>
-              )}
               <button className="btn btn-primary" onClick={handleSaveEdit}>Save</button>
               <button className="btn btn-sm" style={{ background: 'var(--border)', color: 'var(--text)' }} onClick={() => setEditingTeam(null)}>Cancel</button>
             </div>

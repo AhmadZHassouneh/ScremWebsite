@@ -39,7 +39,7 @@ export default function RankingPanel({ rankings, matches }) {
               </tr>
             </thead>
             <tbody>
-              {rankings.slice(0, 16).map((team, index) => {
+              {rankings.map((team, index) => {
                 const rank = index + 1
                 let rankClass = ''
                 if (rank === 1) rankClass = 'rank-1'
