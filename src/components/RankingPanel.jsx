@@ -34,7 +34,6 @@ export default function RankingPanel({ rankings, matches }) {
                 <th>Wins</th>
                 <th>Position Pts</th>
                 <th>Kills</th>
-                <th>Kill Pts</th>
                 <th>Total</th>
               </tr>
             </thead>
@@ -57,7 +56,6 @@ export default function RankingPanel({ rankings, matches }) {
                     <td className={rankClass}>{team.wins}</td>
                     <td>{team.positionPts}</td>
                     <td>{team.kills}</td>
-                    <td>{team.killPtsTotal}</td>
                     <td>
                       <span className="total-cell">{team.total}</span>
                     </td>

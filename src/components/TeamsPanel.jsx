@@ -64,6 +64,15 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
           <button className="btn btn-primary" onClick={() => { setShowAddForm(!showAddForm); setShowUpload(false) }}>
             {showAddForm ? 'Cancel' : '+ Add Team'}
           </button>
+          {teams.length > 0 && (
+            <button className="btn btn-danger" onClick={() => {
+              if (confirm('Delete all teams?')) {
+                setTeams([])
+              }
+            }}>
+              Delete All
+            </button>
+          )}
         </div>
       </div>
 

@@ -259,6 +259,16 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
           <button className="btn btn-primary" onClick={createNewMatch}>
             + New Match
           </button>
+          {matches.length > 0 && (
+            <button className="btn btn-danger" onClick={() => {
+              if (confirm('Delete all matches?')) {
+                setMatches([])
+                setActiveMatch(null)
+              }
+            }}>
+              Delete All
+            </button>
+          )}
         </div>
       </div>
 
