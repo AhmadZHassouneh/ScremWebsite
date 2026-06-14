@@ -1,27 +1,34 @@
-const MATCH_PROMPT = `You are analyzing a PUBG Mobile screenshot. The image could be in ANY format:
+const MATCH_PROMPT = `You are a precise data extraction system analyzing a PUBG Mobile tournament screenshot.
 
 POSSIBLE FORMATS:
-1. Match result screen - shows teams ranked with players and their eliminations/kills
-2. Overall ranking/standings table - shows teams with columns like #, Team, Win, Pos, Kill, Total
-3. Lobby/room screen - shows team slots with player names
-4. Scoreboard - shows teams and scores in various layouts
-5. Any other PUBG tournament screenshot showing teams and players
+1. Match result screen - teams ranked with players and their eliminations/kills
+2. Overall ranking/standings table - columns like #, Team, Win, Pos, Kill, Total
+3. Lobby/room screen - team slots with player names
+4. Scoreboard - teams and scores in various layouts
 
 YOUR TASK: Extract teams with their position and players with kill counts.
 
 Return valid JSON only (no markdown, no explanation, no code fences):
 {"teams":[{"position":1,"players":[{"name":"PlayerName","kills":2}]}]}
 
-Rules:
+CRITICAL RULES FOR READING NUMBERS ACCURATELY:
+- CAREFULLY distinguish between similar-looking digits: 0 vs 8, 1 vs 7, 3 vs 8, 5 vs 6, 6 vs 8
+- Kill counts in PUBG are typically small numbers (0-15 range per player). If you read a very high number, double-check it
+- Look at the EXACT digit shape: 0 has an empty center, 8 has a pinched middle, 6 has a bottom loop, 9 has a top loop
+- For each number you read, verify it by looking at the pixel patterns carefully. Do NOT guess
+- Position/rank numbers should be sequential (1,2,3...) - if you see gaps, re-examine the image
+- Pay attention to the column alignment - make sure you're reading the number from the correct column, not an adjacent one
+
+OTHER RULES:
 - Read ALL teams visible in the image (up to 20 teams)
 - Read player names EXACTLY as shown (including special characters, clan tags like WAR, HiP, STG, etc.)
-- Read kill/elimination counts exactly. If no individual kills are shown, use 0
+- If no individual kills are shown, use 0
 - If the image shows a ranking table without individual players, use the team name as a single player entry
 - If position/rank is shown, use that number. Otherwise number them in order starting from 1
 - Each team can have up to 4 players
 - Return ONLY valid JSON, no markdown, no backticks, no explanation`
 
-const TEAMS_PROMPT = `You are analyzing a PUBG Mobile screenshot. The image could be in ANY format:
+const TEAMS_PROMPT = `You are a precise data extraction system analyzing a PUBG Mobile tournament screenshot.
 
 POSSIBLE FORMATS:
 1. Overall ranking/standings table - columns like #, Team, Win, Pos, Kill, Total
@@ -39,6 +46,7 @@ Return valid JSON only (no markdown, no explanation, no code fences):
 Rules:
 - Read EVERY team name visible in the image, no matter the format
 - Read team names EXACTLY as shown (including dots, spaces, dashes, special characters, clan tags)
+- Pay careful attention to each character - distinguish between similar letters (I vs l, O vs 0, S vs 5)
 - Include ALL teams even if there are 16 or 20+ teams
 - If the image shows player names with clan tags (e.g. "WAR LORD", "STG Player1"), extract the TEAM name (e.g. "WAR", "STG") not individual players
 - If teams have full names visible (e.g. "STG ESP", "HOPEESPORT"), use those exact names
@@ -94,7 +102,6 @@ Rules:
 const MODELS = [
   'gemini-2.5-flash',
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
 ]
 
 const MAX_RETRIES = 3
@@ -208,6 +215,19 @@ function tryRepairJSON(str) {
 }
 
 async function doFetch(url, base64Data, imageBase64, prompt) {
+  const mimeType = imageBase64.includes('image/png') ? 'image/png' :
+    imageBase64.includes('image/webp') ? 'image/webp' : 'image/jpeg'
+
+  const generationConfig = {
+    temperature: 0,
+    maxOutputTokens: 8192,
+  }
+
+  // Enable thinking for gemini-2.5 models for better accuracy
+  if (url.includes('gemini-2.5')) {
+    generationConfig.thinkingConfig = { thinkingBudget: 1024 }
+  }
+
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -217,7 +237,7 @@ async function doFetch(url, base64Data, imageBase64, prompt) {
           parts: [
             {
               inlineData: {
-                mimeType: imageBase64.includes('image/png') ? 'image/png' : 'image/jpeg',
+                mimeType,
                 data: base64Data,
               },
             },
@@ -225,10 +245,7 @@ async function doFetch(url, base64Data, imageBase64, prompt) {
           ],
         },
       ],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 4096,
-      },
+      generationConfig,
     }),
   })
 
@@ -240,7 +257,10 @@ async function doFetch(url, base64Data, imageBase64, prompt) {
 
   const data = await response.json()
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  // Extract text from response, skipping any thinking parts
+  const parts = data.candidates?.[0]?.content?.parts || []
+  const textPart = parts.filter(p => p.text !== undefined && !p.thought).pop()
+  const text = textPart?.text
   if (!text) throw new Error('No response from AI')
 
   let jsonStr = text.trim()
@@ -258,10 +278,49 @@ async function doFetch(url, base64Data, imageBase64, prompt) {
   return parsed.teams !== undefined ? parsed.teams : parsed
 }
 
+// Enhance image quality for better AI reading - upscale small images and sharpen
+function enhanceImageForOCR(base64DataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const MIN_WIDTH = 1920
+      // Only upscale if the image is too small
+      if (img.width >= MIN_WIDTH) {
+        resolve(base64DataUrl)
+        return
+      }
+
+      const scale = MIN_WIDTH / img.width
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')
+
+      // Use high-quality interpolation
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+      const mimeType = base64DataUrl.includes('image/png') ? 'image/png' : 'image/jpeg'
+      const quality = mimeType === 'image/jpeg' ? 0.95 : undefined
+      resolve(canvas.toDataURL(mimeType, quality))
+    }
+    img.onerror = () => resolve(base64DataUrl) // fallback to original on error
+    img.src = base64DataUrl
+  })
+}
+
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
+    reader.onload = async () => {
+      try {
+        const enhanced = await enhanceImageForOCR(reader.result)
+        resolve(enhanced)
+      } catch {
+        resolve(reader.result)
+      }
+    }
     reader.onerror = reject
     reader.readAsDataURL(file)
   })

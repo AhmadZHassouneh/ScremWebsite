@@ -80,11 +80,14 @@ export default function ImageUpload({ onDataExtracted, teams, apiKey }) {
 
         const groups = teamsData.map(t => ({
           position: t.position,
-          players: (t.players || []).slice(0, 4).map(p => ({
-            name: p.name || '',
-            kills: p.kills || 0,
-          })),
-        })).slice(0, 5)
+          players: (t.players || []).slice(0, 4).map(p => {
+            let kills = parseInt(p.kills) || 0
+            // Clamp kill counts to reasonable PUBG range (0-99)
+            if (kills < 0) kills = 0
+            if (kills > 99) kills = 99
+            return { name: p.name || '', kills }
+          }),
+        })).slice(0, 20)
 
         allTeamGroups.push(...groups)
         setProgress({ done: i + 1, total: imageFiles.length })
