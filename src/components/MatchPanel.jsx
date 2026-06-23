@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ImageUpload from './ImageUpload'
+import TeamAutocomplete from './TeamAutocomplete'
 
 export default function MatchPanel({ teams, matches, setMatches, pointSystem, getPositionPoints, killPts, apiKey }) {
   const [activeMatch, setActiveMatch] = useState(null)
@@ -349,13 +350,18 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
                 <div style={{ flex: 1, minWidth: 150 }}>
                   <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>Team Name</label>
-                  <input
-                    type="text"
-                    value={manualTeamName}
-                    onChange={e => setManualTeamName(e.target.value)}
-                    placeholder="Type team name"
-                    style={{ width: '100%', marginTop: 4 }}
-                  />
+                  <div style={{ marginTop: 4 }}>
+                    <TeamAutocomplete
+                      teams={teams}
+                      value={teams.find(t => t.name.toLowerCase() === manualTeamName.toLowerCase())?.id ?? -1}
+                      onChange={(id) => {
+                        const team = teams.find(t => t.id === id)
+                        if (team) setManualTeamName(team.name)
+                      }}
+                      excludeIds={(currentMatch?.results || []).map(r => r.teamId)}
+                      placeholder="Search or type team name"
+                    />
+                  </div>
                 </div>
                 <div style={{ width: 80 }}>
                   <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>Position</label>
@@ -466,18 +472,22 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
                             />
                           </td>
                           <td style={{ fontWeight: 600 }}>
-                            <select
-                              value={result.teamId}
-                              onChange={e => updateTeam(currentMatch.id, result.teamId, parseInt(e.target.value))}
-                              style={{ fontWeight: 600, minWidth: 120 }}
-                            >
-                              {result.teamId < 0 && (
-                                <option value={result.teamId}>{result.teamName}</option>
-                              )}
-                              {teams.map(t => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                              ))}
-                            </select>
+                            {result.teamId < 0 ? (
+                              <TeamAutocomplete
+                                teams={teams}
+                                value={result.teamId}
+                                onChange={(newId) => updateTeam(currentMatch.id, result.teamId, newId)}
+                                excludeIds={currentMatch.results.map(r => r.teamId)}
+                                placeholder={result.teamName}
+                              />
+                            ) : (
+                              <TeamAutocomplete
+                                teams={teams}
+                                value={result.teamId}
+                                onChange={(newId) => updateTeam(currentMatch.id, result.teamId, newId)}
+                                excludeIds={currentMatch.results.map(r => r.teamId)}
+                              />
+                            )}
                           </td>
                           <td>
                             <span className={result.position <= 3 ? `rank-${result.position}` : ''}>

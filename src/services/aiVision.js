@@ -1,4 +1,4 @@
-const MATCH_PROMPT = `You are a precise data extraction system analyzing a PUBG Mobile tournament screenshot.
+const MATCH_PROMPT = `You are a world-class OCR system specialized in reading PUBG Mobile tournament screenshots with extreme precision.
 
 POSSIBLE FORMATS:
 1. Match result screen - teams ranked with players and their eliminations/kills
@@ -11,24 +11,35 @@ YOUR TASK: Extract teams with their position and players with kill counts.
 Return valid JSON only (no markdown, no explanation, no code fences):
 {"teams":[{"position":1,"players":[{"name":"PlayerName","kills":2}]}]}
 
-CRITICAL RULES FOR READING NUMBERS ACCURATELY:
-- CAREFULLY distinguish between similar-looking digits: 0 vs 8, 1 vs 7, 3 vs 8, 5 vs 6, 6 vs 8
-- Kill counts in PUBG are typically small numbers (0-15 range per player). If you read a very high number, double-check it
-- Look at the EXACT digit shape: 0 has an empty center, 8 has a pinched middle, 6 has a bottom loop, 9 has a top loop
-- For each number you read, verify it by looking at the pixel patterns carefully. Do NOT guess
-- Position/rank numbers should be sequential (1,2,3...) - if you see gaps, re-examine the image
-- Pay attention to the column alignment - make sure you're reading the number from the correct column, not an adjacent one
+CRITICAL RULES FOR READING PLAYER NAMES:
+- Zoom into EACH character of EVERY name. Do not skim or guess from partial shapes
+- Player names often contain: uppercase/lowercase mix, numbers, underscores, dots, dashes, and unicode characters
+- Common PUBG clan tags appear as prefixes: e.g. "WAR·", "STG.", "HiP_", "RA·", etc. Read the FULL name including the tag
+- Distinguish carefully between visually similar characters: I/l/1, O/0, S/5, B/8, G/6, Z/2, rn/m, cl/d, VV/W
+- If a character is ambiguous, use the context of the surrounding characters and common PUBG naming patterns
+- Spaces in names are intentional — do not merge separate words
+- Special characters like · (middle dot), ☆, ★, ツ are common in PUBG names — include them exactly
+
+CRITICAL RULES FOR READING NUMBERS:
+- CAREFULLY distinguish between similar-looking digits: 0 vs 8, 1 vs 7, 3 vs 8, 5 vs 6, 6 vs 8, 9 vs 8
+- Kill counts per player are typically 0-15. If you read >20, re-examine that digit carefully
+- Position/rank numbers MUST be sequential (1,2,3...). If you see gaps, re-examine
+- For each digit, look at the EXACT shape: 0 is oval/empty center, 8 has pinched middle, 6 has bottom loop, 9 has top loop, 1 is thin/straight, 7 has a horizontal top stroke
+- Cross-check: total team kills should roughly equal the sum of individual player kills if both are shown
+- Pay attention to column alignment — read numbers from the correct column, not adjacent ones
+
+VERIFICATION STEP:
+After reading all data, mentally re-scan each name and number once more. Fix any readings that look wrong.
 
 OTHER RULES:
 - Read ALL teams visible in the image (up to 20 teams)
-- Read player names EXACTLY as shown (including special characters, clan tags like WAR, HiP, STG, etc.)
 - If no individual kills are shown, use 0
 - If the image shows a ranking table without individual players, use the team name as a single player entry
 - If position/rank is shown, use that number. Otherwise number them in order starting from 1
 - Each team can have up to 4 players
 - Return ONLY valid JSON, no markdown, no backticks, no explanation`
 
-const TEAMS_PROMPT = `You are a precise data extraction system analyzing a PUBG Mobile tournament screenshot.
+const TEAMS_PROMPT = `You are a world-class OCR system specialized in reading PUBG Mobile tournament screenshots with extreme precision.
 
 POSSIBLE FORMATS:
 1. Overall ranking/standings table - columns like #, Team, Win, Pos, Kill, Total
@@ -45,11 +56,12 @@ Return valid JSON only (no markdown, no explanation, no code fences):
 
 Rules:
 - Read EVERY team name visible in the image, no matter the format
-- Read team names EXACTLY as shown (including dots, spaces, dashes, special characters, clan tags)
-- Pay careful attention to each character - distinguish between similar letters (I vs l, O vs 0, S vs 5)
+- Read team names EXACTLY as shown, character by character (including dots, spaces, dashes, special characters, clan tags, unicode symbols)
+- Zoom into each character and distinguish carefully between: I/l/1, O/0, S/5, B/8, G/6, Z/2, rn/m, VV/W, cl/d
 - Include ALL teams even if there are 16 or 20+ teams
 - If the image shows player names with clan tags (e.g. "WAR LORD", "STG Player1"), extract the TEAM name (e.g. "WAR", "STG") not individual players
 - If teams have full names visible (e.g. "STG ESP", "HOPEESPORT"), use those exact names
+- After reading all names, re-verify each one by checking it against the original image
 - Do NOT skip any team, read the entire image carefully
 - Return ONLY valid JSON, no markdown, no backticks, no explanation`
 
@@ -225,7 +237,7 @@ async function doFetch(url, base64Data, imageBase64, prompt) {
 
   // Enable thinking for gemini-2.5 models for better accuracy
   if (url.includes('gemini-2.5')) {
-    generationConfig.thinkingConfig = { thinkingBudget: 1024 }
+    generationConfig.thinkingConfig = { thinkingBudget: 10000 }
   }
 
   const response = await fetch(url, {
@@ -278,19 +290,15 @@ async function doFetch(url, base64Data, imageBase64, prompt) {
   return parsed.teams !== undefined ? parsed.teams : parsed
 }
 
-// Enhance image quality for better AI reading - upscale small images and sharpen
+// Enhance image quality for better AI reading - upscale, sharpen, and boost contrast
 function enhanceImageForOCR(base64DataUrl) {
   return new Promise((resolve) => {
     const img = new Image()
     img.onload = () => {
-      const MIN_WIDTH = 1920
-      // Only upscale if the image is too small
-      if (img.width >= MIN_WIDTH) {
-        resolve(base64DataUrl)
-        return
-      }
+      const MIN_WIDTH = 2400
+      const needsUpscale = img.width < MIN_WIDTH
+      const scale = needsUpscale ? MIN_WIDTH / img.width : 1
 
-      const scale = MIN_WIDTH / img.width
       const canvas = document.createElement('canvas')
       canvas.width = Math.round(img.width * scale)
       canvas.height = Math.round(img.height * scale)
@@ -301,11 +309,28 @@ function enhanceImageForOCR(base64DataUrl) {
       ctx.imageSmoothingQuality = 'high'
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
+      // Apply contrast boost and sharpening via convolution for better text readability
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
+        // Increase contrast
+        const contrast = 1.3
+        const intercept = 128 * (1 - contrast)
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = Math.max(0, Math.min(255, data[i] * contrast + intercept))
+          data[i + 1] = Math.max(0, Math.min(255, data[i + 1] * contrast + intercept))
+          data[i + 2] = Math.max(0, Math.min(255, data[i + 2] * contrast + intercept))
+        }
+        ctx.putImageData(imageData, 0, 0)
+      } catch {
+        // Canvas tainted or other error, proceed without enhancement
+      }
+
       const mimeType = base64DataUrl.includes('image/png') ? 'image/png' : 'image/jpeg'
       const quality = mimeType === 'image/jpeg' ? 0.95 : undefined
       resolve(canvas.toDataURL(mimeType, quality))
     }
-    img.onerror = () => resolve(base64DataUrl) // fallback to original on error
+    img.onerror = () => resolve(base64DataUrl)
     img.src = base64DataUrl
   })
 }

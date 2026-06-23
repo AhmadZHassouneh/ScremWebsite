@@ -1,5 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { analyzeTemplateLayoutWithAI, fileToBase64 } from '../services/aiVision'
+import { saveTemplate, loadTemplate, listTemplates, deleteTemplate } from '../services/templateStorage.js'
+import OverlayEditor from './OverlayEditor/OverlayEditor'
 
 const DEFAULT_ROWS = 16
 
@@ -7,6 +9,7 @@ const emptyRow = () => ({ logo: null, logoPreview: null, team: '', win: '', pos:
 const createRows = (count) => Array.from({ length: count }, () => emptyRow())
 
 export default function DesignPanel({ rankings, apiKey }) {
+  const [mode, setMode] = useState('template') // 'template' | 'overlay'
   const [bgImage, setBgImage] = useState(null)
   const [bgFile, setBgFile] = useState(null)
   const [rows, setRows] = useState(createRows(DEFAULT_ROWS))
@@ -17,6 +20,69 @@ export default function DesignPanel({ rankings, apiKey }) {
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+
+  // Template save/load state
+  const [templateId, setTemplateId] = useState(null)
+  const [templateName, setTemplateName] = useState('')
+  const [showTemplateSave, setShowTemplateSave] = useState(false)
+  const [showTemplateLoad, setShowTemplateLoad] = useState(false)
+  const [templateList, setTemplateList] = useState([])
+  const [savingTemplate, setSavingTemplate] = useState(false)
+
+  const refreshTemplateList = useCallback(async () => {
+    const list = await listTemplates()
+    setTemplateList(list)
+  }, [])
+
+  useEffect(() => {
+    if (showTemplateLoad) refreshTemplateList()
+  }, [showTemplateLoad, refreshTemplateList])
+
+  const handleSaveTemplate = async () => {
+    if (!bgImage) return
+    setSavingTemplate(true)
+    try {
+      const id = templateId || crypto.randomUUID()
+      const name = templateName.trim() || 'Untitled Template'
+      await saveTemplate({ id, name, bgBlobUrl: bgImage, rows, cellPositions, fontSize, fontColor, fontFamily })
+      setTemplateId(id)
+      setTemplateName(name)
+      setShowTemplateSave(false)
+    } catch (err) {
+      console.error('Template save failed:', err)
+    } finally {
+      setSavingTemplate(false)
+    }
+  }
+
+  const handleLoadTemplate = async (id) => {
+    try {
+      const t = await loadTemplate(id)
+      if (!t) return
+      if (bgImage) URL.revokeObjectURL(bgImage)
+      setBgImage(t.bgImage)
+      setBgFile(null) // can't restore File object, but bgImage blob URL works for preview
+      setRows(t.rows || createRows(DEFAULT_ROWS))
+      setCellPositions(t.cellPositions || null)
+      setFontSize(t.fontSize ?? 1.4)
+      setFontColor(t.fontColor ?? '#1a1a2e')
+      setFontFamily(t.fontFamily ?? 'Arial Black')
+      setTemplateId(t.id)
+      setTemplateName(t.name)
+      setShowTemplateLoad(false)
+    } catch (err) {
+      console.error('Template load failed:', err)
+    }
+  }
+
+  const handleDeleteTemplate = async (id) => {
+    await deleteTemplate(id)
+    if (templateId === id) {
+      setTemplateId(null)
+      setTemplateName('')
+    }
+    refreshTemplateList()
+  }
 
   const bgRef = useRef()
 
@@ -297,16 +363,117 @@ export default function DesignPanel({ rankings, apiKey }) {
 
   return (
     <div>
+      {/* Mode toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+        <button
+          className={`btn btn-sm ${mode === 'template' ? 'btn-primary' : ''}`}
+          style={mode !== 'template' ? { background: 'var(--bg-input)', color: 'var(--text-muted)', border: '1px solid var(--border)' } : {}}
+          onClick={() => setMode('template')}
+        >
+          Template Mode
+        </button>
+        <button
+          className={`btn btn-sm ${mode === 'overlay' ? 'btn-primary' : ''}`}
+          style={mode !== 'overlay' ? { background: 'var(--bg-input)', color: 'var(--text-muted)', border: '1px solid var(--border)' } : {}}
+          onClick={() => setMode('overlay')}
+        >
+          Overlay Editor
+        </button>
+      </div>
+
+      {mode === 'overlay' && <OverlayEditor />}
+
+      {mode === 'template' && <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-        <h2 style={{ color: 'var(--primary)' }}>Design Overlay</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h2 style={{ color: 'var(--primary)' }}>Design Overlay</h2>
+          {templateName && (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{templateName}</span>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {rankings && rankings.length > 0 && (
             <button className="btn btn-primary" onClick={fillFromRankings}>Fill from Rankings</button>
           )}
           <button className="btn btn-primary" onClick={exportAsImage} disabled={!bgImage || !cellPositions}>Export Image</button>
+          <button
+            className="btn btn-sm"
+            style={{ background: 'var(--bg-input)', color: 'var(--text)', border: '1px solid var(--border)' }}
+            onClick={() => { setTemplateName(templateName || ''); setShowTemplateSave(true) }}
+            disabled={!bgImage}
+          >Save</button>
+          <button
+            className="btn btn-sm"
+            style={{ background: 'var(--bg-input)', color: 'var(--text)', border: '1px solid var(--border)' }}
+            onClick={() => setShowTemplateLoad(true)}
+          >Load</button>
           <button className="btn btn-sm" style={{ background: 'var(--border)', color: 'var(--text)' }} onClick={clearAll}>Clear</button>
         </div>
       </div>
+
+      {/* Template Save Dialog */}
+      {showTemplateSave && (
+        <div style={{
+          display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16,
+          background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px',
+        }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', flexShrink: 0 }}>Name:</span>
+          <input
+            type="text"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder="My Template"
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTemplate() }}
+            style={{ flex: 1, minWidth: 120, fontSize: '0.85rem', padding: '5px 8px' }}
+            autoFocus
+          />
+          <button className="btn btn-primary btn-sm" onClick={handleSaveTemplate} disabled={savingTemplate}>
+            {savingTemplate ? 'Saving...' : 'Save'}
+          </button>
+          <button className="btn btn-sm" style={{ background: 'var(--border)', color: 'var(--text)' }} onClick={() => setShowTemplateSave(false)}>
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Template Load Modal */}
+      {showTemplateLoad && (
+        <div className="modal-overlay" onClick={() => setShowTemplateLoad(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <h2 style={{ color: 'var(--primary)', marginBottom: 16 }}>Load Template</h2>
+            {templateList.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>No saved templates yet.</p>
+            ) : (
+              <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                {templateList.map((item) => (
+                  <div key={item.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)',
+                    marginBottom: 8, background: templateId === item.id ? 'var(--bg-input)' : 'transparent',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem' }}>
+                        {item.name}
+                        {templateId === item.id && (
+                          <span style={{ color: 'var(--primary)', fontSize: '0.75rem', marginLeft: 8 }}>(current)</span>
+                        )}
+                      </div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 2 }}>
+                        {item.rowCount} rows &middot; {new Date(item.savedAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleLoadTemplate(item.id)} style={{ flexShrink: 0 }}>Load</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleDeleteTemplate(item.id)} style={{ flexShrink: 0, padding: '6px 10px' }}>&times;</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ marginTop: 16, textAlign: 'right' }}>
+              <button className="btn btn-sm" style={{ background: 'var(--border)', color: 'var(--text)' }} onClick={() => setShowTemplateLoad(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Step 1: Upload & Analyze */}
       <div className="card" style={{ marginBottom: 16 }}>
@@ -434,6 +601,7 @@ export default function DesignPanel({ rankings, apiKey }) {
           </p>
         </div>
       )}
+      </>}
     </div>
   )
 }
