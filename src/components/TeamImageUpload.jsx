@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { extractTeamNamesWithAI, fileToBase64 } from '../services/aiVision'
+import { fetchImageFromUrl, extractUrl } from '../services/imageFromUrl'
 
 const MAX_IMAGES = 10
 
@@ -44,6 +45,35 @@ export default function TeamImageUpload({ onTeamsExtracted, apiKey }) {
   const handleDragLeaveZone = () => {
     setDraggingOver(false)
   }
+
+  useEffect(() => {
+    const handlePaste = async (e) => {
+      const items = Array.from(e.clipboardData?.items || [])
+      const imageFiles = items
+        .filter(item => item.type.startsWith('image/'))
+        .map(item => item.getAsFile())
+        .filter(Boolean)
+      if (imageFiles.length) {
+        addFiles(imageFiles)
+        return
+      }
+      const text = e.clipboardData?.getData('text') || ''
+      const url = extractUrl(text)
+      if (!url) return
+      if (!/^https:\/\//i.test(url)) {
+        setError('Only secure (HTTPS) image URLs are allowed.')
+        return
+      }
+      try {
+        const file = await fetchImageFromUrl(url)
+        addFiles([file])
+      } catch (err) {
+        setError(err.message)
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [])
 
   const processImages = async () => {
     if (!imageFiles.length) return
@@ -178,7 +208,7 @@ export default function TeamImageUpload({ onTeamsExtracted, apiKey }) {
         }}
       >
         <p style={{ color: draggingOver ? 'var(--primary)' : 'var(--text-muted)', marginBottom: 12, fontWeight: 600 }}>
-          {draggingOver ? 'Drop images here' : 'Drag & drop images here, or click to browse'}
+          {draggingOver ? 'Drop images here' : 'Drag & drop, paste (Ctrl+V), or click to browse'}
         </p>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFileChange}

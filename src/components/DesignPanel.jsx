@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { analyzeTemplateLayoutWithAI, fileToBase64 } from '../services/aiVision'
+import { fetchImageFromUrl, extractUrl } from '../services/imageFromUrl'
 import { saveTemplate, loadTemplate, listTemplates, deleteTemplate } from '../services/templateStorage.js'
 import OverlayEditor from './OverlayEditor/OverlayEditor'
 
@@ -115,6 +116,34 @@ export default function DesignPanel({ rankings, apiKey }) {
   const handleBgDragLeave = () => {
     setBgDraggingOver(false)
   }
+
+  useEffect(() => {
+    if (mode !== 'template') return
+    const handlePaste = async (e) => {
+      const items = Array.from(e.clipboardData?.items || [])
+      const imageItem = items.find(item => item.type.startsWith('image/'))
+      if (imageItem) {
+        const file = imageItem.getAsFile()
+        if (file) applyBgFile(file)
+        return
+      }
+      const text = e.clipboardData?.getData('text') || ''
+      const url = extractUrl(text)
+      if (!url) return
+      if (!/^https:\/\//i.test(url)) {
+        setError('Only secure (HTTPS) image URLs are allowed.')
+        return
+      }
+      try {
+        const file = await fetchImageFromUrl(url)
+        applyBgFile(file)
+      } catch (err) {
+        setError(err.message)
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [mode])
 
   const analyzeTemplate = async () => {
     if (!bgFile || !apiKey) {
@@ -555,7 +584,7 @@ export default function DesignPanel({ rankings, apiKey }) {
           }}
         >
           <p style={{ color: bgDraggingOver ? 'var(--primary)' : 'var(--text-muted)', marginBottom: 12, fontWeight: 600 }}>
-            {bgDraggingOver ? 'Drop template image here' : 'Drag & drop template image here, or click to browse'}
+            {bgDraggingOver ? 'Drop template image here' : 'Drag & drop, paste (Ctrl+V), or click to browse'}
           </p>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
             <input type="file" accept="image/*" onChange={handleBgUpload}
