@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import TeamImageUpload from './TeamImageUpload'
 
 export default function TeamsPanel({ teams, setTeams, apiKey }) {
@@ -32,6 +32,31 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
     setNewTeamName('')
     setShowAddForm(false)
   }
+
+  const dragTeamRef = useRef(null)
+  const dragOverTeamRef = useRef(null)
+
+  const handleTeamDragStart = useCallback((index) => {
+    dragTeamRef.current = index
+  }, [])
+
+  const handleTeamDragOver = useCallback((e, index) => {
+    e.preventDefault()
+    dragOverTeamRef.current = index
+  }, [])
+
+  const handleTeamDrop = useCallback((e) => {
+    e.preventDefault()
+    const from = dragTeamRef.current
+    const to = dragOverTeamRef.current
+    if (from === null || to === null || from === to) return
+    const updated = [...teams]
+    const [moved] = updated.splice(from, 1)
+    updated.splice(to, 0, moved)
+    setTeams(updated)
+    dragTeamRef.current = null
+    dragOverTeamRef.current = null
+  }, [teams, setTeams])
 
   const handleImageTeams = (teamNames) => {
     const existingNames = teams.map(t => t.name.toLowerCase().trim())
@@ -103,8 +128,16 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
       )}
 
       <div className="teams-grid">
-        {teams.map(team => (
-          <div key={team.id} className="team-card">
+        {teams.map((team, idx) => (
+          <div
+            key={team.id}
+            className="team-card"
+            draggable
+            onDragStart={() => handleTeamDragStart(idx)}
+            onDragOver={(e) => handleTeamDragOver(e, idx)}
+            onDrop={handleTeamDrop}
+            style={{ cursor: 'grab' }}
+          >
             <h3>
               <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="team-number">{team.id}</span>

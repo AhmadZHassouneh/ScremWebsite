@@ -85,14 +85,35 @@ export default function DesignPanel({ rankings, apiKey }) {
   }
 
   const bgRef = useRef()
+  const [bgDraggingOver, setBgDraggingOver] = useState(false)
 
-  const handleBgUpload = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+  const applyBgFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return
     setBgImage(URL.createObjectURL(file))
     setBgFile(file)
     setCellPositions(null)
     setError('')
+  }
+
+  const handleBgUpload = (e) => {
+    const file = e.target.files[0]
+    applyBgFile(file)
+  }
+
+  const handleBgDrop = (e) => {
+    e.preventDefault()
+    setBgDraggingOver(false)
+    const file = e.dataTransfer.files[0]
+    applyBgFile(file)
+  }
+
+  const handleBgDragOver = (e) => {
+    e.preventDefault()
+    setBgDraggingOver(true)
+  }
+
+  const handleBgDragLeave = () => {
+    setBgDraggingOver(false)
   }
 
   const analyzeTemplate = async () => {
@@ -329,11 +350,53 @@ export default function DesignPanel({ rankings, apiKey }) {
     })
   }
 
+  const dragRowRef = useRef(null)
+  const dragOverRowRef = useRef(null)
+
+  const handleRowDragStart = useCallback((index) => {
+    dragRowRef.current = index
+  }, [])
+
+  const handleRowDragOver = useCallback((e, index) => {
+    e.preventDefault()
+    dragOverRowRef.current = index
+  }, [])
+
+  const handleRowDrop = useCallback((e) => {
+    e.preventDefault()
+    const from = dragRowRef.current
+    const to = dragOverRowRef.current
+    if (from === null || to === null || from === to) return
+    setRows(prev => {
+      const updated = [...prev]
+      const [moved] = updated.splice(from, 1)
+      updated.splice(to, 0, moved)
+      return updated
+    })
+    if (cellPositions) {
+      setCellPositions(prev => {
+        const updated = [...prev]
+        const [moved] = updated.splice(from, 1)
+        updated.splice(to, 0, moved)
+        return updated
+      })
+    }
+    dragRowRef.current = null
+    dragOverRowRef.current = null
+  }, [cellPositions])
+
   const renderDataInputRow = (row, i) => (
-    <div key={i} style={{
-      display: 'flex', gap: 4, alignItems: 'center', marginBottom: 4,
-      background: 'var(--bg-input)', padding: '4px 6px', borderRadius: 6, border: '1px solid var(--border)',
-    }}>
+    <div
+      key={i}
+      draggable
+      onDragStart={() => handleRowDragStart(i)}
+      onDragOver={(e) => handleRowDragOver(e, i)}
+      onDrop={handleRowDrop}
+      style={{
+        display: 'flex', gap: 4, alignItems: 'center', marginBottom: 4,
+        background: 'var(--bg-input)', padding: '4px 6px', borderRadius: 6, border: '1px solid var(--border)', cursor: 'grab',
+      }}
+    >
       <span style={{ color: 'var(--primary)', fontWeight: 700, width: 20, textAlign: 'center', fontSize: '0.8rem', flexShrink: 0 }}>{i + 1}</span>
       <div style={{ flexShrink: 0 }}>
         {row.logoPreview ? (
@@ -478,12 +541,29 @@ export default function DesignPanel({ rankings, apiKey }) {
       {/* Step 1: Upload & Analyze */}
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ color: 'var(--primary)', marginBottom: 12 }}>1. Upload Template & Analyze</h3>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input type="file" accept="image/*" onChange={handleBgUpload}
-            style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 6, padding: 8, color: 'var(--text)' }} />
-          <button className="btn btn-primary" onClick={analyzeTemplate} disabled={!bgFile || !apiKey || analyzing}>
-            {analyzing ? 'AI Analyzing...' : 'Analyze with AI'}
-          </button>
+        <div
+          onDrop={handleBgDrop}
+          onDragOver={handleBgDragOver}
+          onDragLeave={handleBgDragLeave}
+          style={{
+            border: `2px dashed ${bgDraggingOver ? 'var(--primary)' : 'var(--border)'}`,
+            borderRadius: 12,
+            padding: 24,
+            textAlign: 'center',
+            background: bgDraggingOver ? 'rgba(99,102,241,0.08)' : 'var(--bg-input)',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <p style={{ color: bgDraggingOver ? 'var(--primary)' : 'var(--text-muted)', marginBottom: 12, fontWeight: 600 }}>
+            {bgDraggingOver ? 'Drop template image here' : 'Drag & drop template image here, or click to browse'}
+          </p>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <input type="file" accept="image/*" onChange={handleBgUpload}
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 6, padding: 8, color: 'var(--text)' }} />
+            <button className="btn btn-primary" onClick={analyzeTemplate} disabled={!bgFile || !apiKey || analyzing}>
+              {analyzing ? 'AI Analyzing...' : 'Analyze with AI'}
+            </button>
+          </div>
         </div>
 
         {!apiKey && (

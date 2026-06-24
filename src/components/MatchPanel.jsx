@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import ImageUpload from './ImageUpload'
 import TeamAutocomplete from './TeamAutocomplete'
 
@@ -243,6 +243,31 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
     setMatches(matches.map(m => m.id === matchId ? { ...m, name } : m))
   }
 
+  const dragMatchRef = useRef(null)
+  const dragOverMatchRef = useRef(null)
+
+  const handleMatchDragStart = useCallback((index) => {
+    dragMatchRef.current = index
+  }, [])
+
+  const handleMatchDragOver = useCallback((e, index) => {
+    e.preventDefault()
+    dragOverMatchRef.current = index
+  }, [])
+
+  const handleMatchDrop = useCallback((e) => {
+    e.preventDefault()
+    const from = dragMatchRef.current
+    const to = dragOverMatchRef.current
+    if (from === null || to === null || from === to) return
+    const updated = [...matches]
+    const [moved] = updated.splice(from, 1)
+    updated.splice(to, 0, moved)
+    setMatches(updated)
+    dragMatchRef.current = null
+    dragOverMatchRef.current = null
+  }, [matches, setMatches])
+
   const currentMatch = matches.find(m => m.id === activeMatch)
 
   const getTeamTotalKills = (result) => {
@@ -295,8 +320,15 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
 
       {matches.length > 0 && (
         <div className="match-tabs">
-          {matches.map(match => (
-            <div key={match.id} style={{ display: 'flex', gap: 0 }}>
+          {matches.map((match, idx) => (
+            <div
+              key={match.id}
+              draggable
+              onDragStart={() => handleMatchDragStart(idx)}
+              onDragOver={(e) => handleMatchDragOver(e, idx)}
+              onDrop={handleMatchDrop}
+              style={{ display: 'flex', gap: 0, cursor: 'grab' }}
+            >
               <button
                 className={`match-tab ${activeMatch === match.id ? 'active' : ''}`}
                 onClick={() => setActiveMatch(match.id)}

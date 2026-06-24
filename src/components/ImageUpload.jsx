@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { extractMatchDataWithAI, fileToBase64 } from '../services/aiVision'
 
 const MAX_IMAGES = 10
@@ -10,23 +10,46 @@ export default function ImageUpload({ onDataExtracted, teams, apiKey }) {
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [editableParsed, setEditableParsed] = useState(null)
   const [error, setError] = useState('')
+  const [draggingOver, setDraggingOver] = useState(false)
   const fileRef = useRef()
 
-  const handleFileChange = (e) => {
-    const newFiles = Array.from(e.target.files || [])
+  const addFiles = (newFiles) => {
     if (!newFiles.length) return
     setError('')
     setEditableParsed(null)
+    const imageOnly = newFiles.filter(f => f.type.startsWith('image/'))
+    if (!imageOnly.length) return
     setImageFiles(prev => {
-      const combined = [...prev, ...newFiles].slice(0, MAX_IMAGES)
+      const combined = [...prev, ...imageOnly].slice(0, MAX_IMAGES)
       return combined
     })
     setPreviews(prev => {
-      const newPreviews = newFiles.map(f => URL.createObjectURL(f))
+      const newPreviews = imageOnly.map(f => URL.createObjectURL(f))
       return [...prev, ...newPreviews].slice(0, MAX_IMAGES)
     })
+  }
+
+  const handleFileChange = (e) => {
+    const newFiles = Array.from(e.target.files || [])
+    addFiles(newFiles)
     // Reset input so the same file can be selected again
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const handleDropZone = (e) => {
+    e.preventDefault()
+    setDraggingOver(false)
+    const files = Array.from(e.dataTransfer.files || [])
+    addFiles(files)
+  }
+
+  const handleDragOverZone = (e) => {
+    e.preventDefault()
+    setDraggingOver(true)
+  }
+
+  const handleDragLeaveZone = () => {
+    setDraggingOver(false)
   }
 
   const deduplicateTeams = (allTeamGroups) => {
@@ -176,6 +199,41 @@ export default function ImageUpload({ onDataExtracted, teams, apiKey }) {
     if (newFiles.length === 0 && fileRef.current) fileRef.current.value = ''
   }
 
+  const dragItem = useRef(null)
+  const dragOverItem = useRef(null)
+
+  const handleDragStart = useCallback((index) => {
+    dragItem.current = index
+  }, [])
+
+  const handleDragOver = useCallback((e, index) => {
+    e.preventDefault()
+    dragOverItem.current = index
+  }, [])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    const from = dragItem.current
+    const to = dragOverItem.current
+    if (from === null || to === null || from === to) return
+
+    setImageFiles(prev => {
+      const updated = [...prev]
+      const [moved] = updated.splice(from, 1)
+      updated.splice(to, 0, moved)
+      return updated
+    })
+    setPreviews(prev => {
+      const updated = [...prev]
+      const [moved] = updated.splice(from, 1)
+      updated.splice(to, 0, moved)
+      return updated
+    })
+
+    dragItem.current = null
+    dragOverItem.current = null
+  }, [])
+
   return (
     <div className="card">
       <h2>Upload Match Screenshots</h2>
@@ -183,28 +241,46 @@ export default function ImageUpload({ onDataExtracted, teams, apiKey }) {
         Upload up to {MAX_IMAGES} PUBG match result screenshots. AI will read all teams, deduplicate, and merge results automatically.
       </p>
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleFileChange}
-          style={{
-            background: 'var(--bg-input)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            padding: 8,
-            color: 'var(--text)',
-          }}
-        />
-        <button
-          className="btn btn-primary"
-          onClick={processImages}
-          disabled={!imageFiles.length || uploading || !apiKey}
-        >
-          {uploading ? `AI Reading... (${progress.done}/${progress.total})` : `Extract from ${imageFiles.length || 0} image${imageFiles.length !== 1 ? 's' : ''}`}
-        </button>
+      <div
+        onDrop={handleDropZone}
+        onDragOver={handleDragOverZone}
+        onDragLeave={handleDragLeaveZone}
+        style={{
+          border: `2px dashed ${draggingOver ? 'var(--primary)' : 'var(--border)'}`,
+          borderRadius: 12,
+          padding: 24,
+          marginBottom: 16,
+          textAlign: 'center',
+          background: draggingOver ? 'rgba(99,102,241,0.08)' : 'var(--bg-input)',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <p style={{ color: draggingOver ? 'var(--primary)' : 'var(--text-muted)', marginBottom: 12, fontWeight: 600 }}>
+          {draggingOver ? 'Drop images here' : 'Drag & drop images here, or click to browse'}
+        </p>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            style={{
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              padding: 8,
+              color: 'var(--text)',
+            }}
+          />
+          <button
+            className="btn btn-primary"
+            onClick={processImages}
+            disabled={!imageFiles.length || uploading || !apiKey}
+          >
+            {uploading ? `AI Reading... (${progress.done}/${progress.total})` : `Extract from ${imageFiles.length || 0} image${imageFiles.length !== 1 ? 's' : ''}`}
+          </button>
+        </div>
       </div>
 
       {!apiKey && (
@@ -265,10 +341,18 @@ export default function ImageUpload({ onDataExtracted, teams, apiKey }) {
           marginBottom: 16,
         }}>
           {previews.map((src, i) => (
-            <div key={i} style={{ position: 'relative' }}>
+            <div
+              key={i}
+              draggable
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDrop={handleDrop}
+              style={{ position: 'relative', cursor: 'grab' }}
+            >
               <img
                 src={src}
                 alt={`Screenshot ${i + 1}`}
+                draggable={false}
                 style={{
                   width: '100%',
                   height: 120,

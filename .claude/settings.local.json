@@ -5,7 +5,26 @@
       "Bash(npm run:*)",
       "Bash(start:*)",
       "Bash(npm uninstall:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "Bash(npm list:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(firebase hosting:sites:list --project scremwebsite)",
+      "Bash(firebase login:*)",
+      "Bash(firebase:*)",
+      "Bash(npx vite:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx firebase:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(netstat -ano)",
+      "Bash(grep -E LISTENING.*:517[0-9])",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr \"517\")",
+      "Bash(taskkill //PID 27988 //F)",
+      "Bash(taskkill //PID 33148 //F)"
     ]
   }
 }
