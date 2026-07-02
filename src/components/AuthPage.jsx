@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -6,6 +6,8 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth'
 import { auth } from '../services/firebase'
 import { useI18n } from '../i18n/index.jsx'
@@ -89,14 +91,36 @@ export default function AuthPage() {
     }
   }
 
+  // Surface errors from a redirect-based Google sign-in after returning
+  useEffect(() => {
+    getRedirectResult(auth).catch((err) => {
+      if (err.code !== 'auth/popup-closed-by-user') setError(err.message)
+    })
+  }, [])
+
   const handleGoogleLogin = async () => {
     setError('')
+    setInfo('')
     setLoading(true)
+    const provider = new GoogleAuthProvider()
     try {
-      const provider = new GoogleAuthProvider()
       await signInWithPopup(auth, provider)
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        // user closed the window — not an error
+      } else if (
+        err.code === 'auth/popup-blocked' ||
+        err.code === 'auth/internal-error' ||
+        err.code === 'auth/operation-not-supported-in-this-environment'
+      ) {
+        // popup failed (blocker / strict browser) — full-page redirect works everywhere
+        try {
+          await signInWithRedirect(auth, provider)
+          return
+        } catch (redirectErr) {
+          setError(redirectErr.message)
+        }
+      } else {
         setError(err.message)
       }
     } finally {
