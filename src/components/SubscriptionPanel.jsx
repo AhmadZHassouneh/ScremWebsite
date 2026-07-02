@@ -1,8 +1,15 @@
+import { useState, useEffect } from 'react'
 import { useI18n } from '../i18n/index.jsx'
 
 export default function SubscriptionPanel({ subscription, userEmail, uid }) {
   const { t } = useI18n()
   const currentPlan = subscription?.plan || 'free'
+  const [selectedPlan, setSelectedPlan] = useState(currentPlan)
+
+  // Follow the current plan when it changes (e.g. after checkout completes)
+  useEffect(() => {
+    setSelectedPlan(currentPlan)
+  }, [currentPlan])
   const monthlyLink = import.meta.env.VITE_STRIPE_MONTHLY_LINK || ''
   const yearlyLink = import.meta.env.VITE_STRIPE_YEARLY_LINK || ''
   const portalLink = import.meta.env.VITE_STRIPE_PORTAL_LINK || ''
@@ -110,8 +117,13 @@ export default function SubscriptionPanel({ subscription, userEmail, uid }) {
       <div className="plans-grid">
         {plans.map(plan => {
           const isCurrent = currentPlan === plan.id
+          const isSelected = selectedPlan === plan.id
           return (
-            <div key={plan.id} className={`plan-card ${isCurrent ? 'plan-current' : ''}`}>
+            <div
+              key={plan.id}
+              className={`plan-card ${isSelected ? 'plan-current' : ''}`}
+              onClick={() => setSelectedPlan(plan.id)}
+            >
               {plan.badge && <div className="plan-badge">{plan.badge}</div>}
               <h3>{plan.name}</h3>
               <div className="plan-price">

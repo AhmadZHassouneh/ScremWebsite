@@ -501,6 +501,7 @@ input[type="number"] {
   padding: 28px 24px;
   position: relative;
   transition: border-color 0.2s, transform 0.2s;
+  cursor: pointer;
 }
 
 .plan-card:hover {
