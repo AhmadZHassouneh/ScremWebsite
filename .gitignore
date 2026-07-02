@@ -14,6 +14,12 @@ dist-ssr
 *.local
 .firebase/
 
+# Stripe webhook worker - secrets must never be committed
+stripe-webhook-worker/service-account.json
+stripe-webhook-worker/.dev.vars
+stripe-webhook-worker/dist-check/
+stripe-webhook-worker/.wrangler/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
