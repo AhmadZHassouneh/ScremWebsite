@@ -20,6 +20,11 @@ stripe-webhook-worker/.dev.vars
 stripe-webhook-worker/dist-check/
 stripe-webhook-worker/.wrangler/
 
+# Paddle webhook worker - secrets must never be committed
+paddle-webhook-worker/service-account.json
+paddle-webhook-worker/.dev.vars
+paddle-webhook-worker/.wrangler/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

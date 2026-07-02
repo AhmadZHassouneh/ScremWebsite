@@ -1,6 +1,34 @@
 import { useState, useEffect } from 'react'
 import { useI18n } from '../i18n/index.jsx'
 
+// Paddle (merchant of record) overlay checkout. Loaded on demand so users who
+// never open the plans tab don't pay for the script.
+let paddlePromise = null
+function loadPaddle(clientToken, environment) {
+  if (!paddlePromise) {
+    paddlePromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js'
+      script.onload = () => {
+        try {
+          if (environment === 'sandbox') window.Paddle.Environment.set('sandbox')
+          window.Paddle.Initialize({ token: clientToken })
+          resolve(window.Paddle)
+        } catch (err) {
+          paddlePromise = null
+          reject(err)
+        }
+      }
+      script.onerror = () => {
+        paddlePromise = null
+        reject(new Error('Failed to load Paddle.js'))
+      }
+      document.head.appendChild(script)
+    })
+  }
+  return paddlePromise
+}
+
 export default function SubscriptionPanel({ subscription, userEmail, uid }) {
   const { t } = useI18n()
   const currentPlan = subscription?.plan || 'free'
@@ -10,10 +38,12 @@ export default function SubscriptionPanel({ subscription, userEmail, uid }) {
   useEffect(() => {
     setSelectedPlan(currentPlan)
   }, [currentPlan])
-  const monthlyLink = import.meta.env.VITE_STRIPE_MONTHLY_LINK || ''
-  const yearlyLink = import.meta.env.VITE_STRIPE_YEARLY_LINK || ''
-  const portalLink = import.meta.env.VITE_STRIPE_PORTAL_LINK || ''
-  const hasStripe = !!(monthlyLink || yearlyLink)
+  const paddleToken = import.meta.env.VITE_PADDLE_CLIENT_TOKEN || ''
+  const paddleEnv = import.meta.env.VITE_PADDLE_ENV || 'production'
+  const monthlyPriceId = import.meta.env.VITE_PADDLE_MONTHLY_PRICE_ID || ''
+  const yearlyPriceId = import.meta.env.VITE_PADDLE_YEARLY_PRICE_ID || ''
+  const portalLink = import.meta.env.VITE_PADDLE_PORTAL_LINK || ''
+  const hasPayments = !!(paddleToken && (monthlyPriceId || yearlyPriceId))
 
   const periodEnd = subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd) : null
   const canceledButPaid = subscription?.status === 'canceled' && periodEnd && periodEnd > new Date()
@@ -58,21 +88,20 @@ export default function SubscriptionPanel({ subscription, userEmail, uid }) {
     },
   ]
 
-  const handleUpgrade = (planId) => {
-    const link = planId === 'pro_monthly' ? monthlyLink : yearlyLink
-    if (!link) return
+  const handleUpgrade = async (planId) => {
+    const priceId = planId === 'pro_monthly' ? monthlyPriceId : yearlyPriceId
+    if (!priceId || !paddleToken) return
     try {
-      const url = new URL(link)
-      const allowed = ['buy.stripe.com', 'checkout.stripe.com']
-      if (!allowed.includes(url.hostname)) {
-        console.error('Invalid payment URL: must be a Stripe domain')
-        return
-      }
-      url.searchParams.set('client_reference_id', uid)
-      if (userEmail) url.searchParams.set('prefilled_email', userEmail)
-      window.open(url.toString(), '_blank')
-    } catch {
-      // Invalid URL — do not open
+      const Paddle = await loadPaddle(paddleToken, paddleEnv)
+      Paddle.Checkout.open({
+        items: [{ priceId, quantity: 1 }],
+        customer: userEmail ? { email: userEmail } : undefined,
+        // uid is copied by Paddle onto the transaction and subscription,
+        // which is how the webhook worker finds the user document
+        customData: { uid },
+      })
+    } catch (err) {
+      console.error('Failed to open checkout:', err)
     }
   }
 
@@ -144,9 +173,9 @@ export default function SubscriptionPanel({ subscription, userEmail, uid }) {
                   className="btn"
                   style={{ width: '100%', background: 'var(--gold)', color: '#0a0a0a', fontWeight: 700 }}
                   onClick={() => handleUpgrade(plan.id)}
-                  disabled={!(plan.id === 'pro_monthly' ? monthlyLink : yearlyLink)}
+                  disabled={!hasPayments || !(plan.id === 'pro_monthly' ? monthlyPriceId : yearlyPriceId)}
                 >
-                  {(plan.id === 'pro_monthly' ? monthlyLink : yearlyLink) ? t('upgradeNow') : t('upgrade')}
+                  {hasPayments && (plan.id === 'pro_monthly' ? monthlyPriceId : yearlyPriceId) ? t('upgradeNow') : t('upgrade')}
                 </button>
               ) : null}
             </div>
@@ -154,7 +183,7 @@ export default function SubscriptionPanel({ subscription, userEmail, uid }) {
         })}
       </div>
 
-      {!hasStripe && (
+      {!hasPayments && (
         <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 20, fontSize: '0.9rem' }}>
           {t('paymentSetupMsg')}
         </p>
