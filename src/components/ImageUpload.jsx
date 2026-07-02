@@ -4,7 +4,7 @@ import { fetchImageFromUrl, extractUrl } from '../services/imageFromUrl'
 
 const MAX_IMAGES = 10
 
-export default function ImageUpload({ onDataExtracted, teams, apiKey }) {
+export default function ImageUpload({ onDataExtracted, apiKey }) {
   const [uploading, setUploading] = useState(false)
   const [previews, setPreviews] = useState([])
   const [imageFiles, setImageFiles] = useState([])

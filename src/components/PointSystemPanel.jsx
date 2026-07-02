@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
 
 export default function PointSystemPanel({ pointSystem, setPointSystem, killPts, setKillPts }) {
+  const { t } = useI18n()
   const [showAddRow, setShowAddRow] = useState(false)
   const [newPosition, setNewPosition] = useState('')
   const [newPoints, setNewPoints] = useState(0)
@@ -11,10 +13,16 @@ export default function PointSystemPanel({ pointSystem, setPointSystem, killPts,
     setPointSystem(updated)
   }
 
+  // Keep range entries like "9-20" as strings — parseInt("9-20") would
+  // silently truncate them to 9
+  const toPosition = (value) => {
+    const trimmed = String(value).trim()
+    return /^\d+$/.test(trimmed) ? parseInt(trimmed, 10) : trimmed
+  }
+
   const updatePosition = (index, value) => {
     const updated = [...pointSystem]
-    const numVal = parseInt(value)
-    updated[index] = { ...updated[index], position: isNaN(numVal) ? value : numVal }
+    updated[index] = { ...updated[index], position: toPosition(value) }
     setPointSystem(updated)
   }
 
@@ -24,9 +32,8 @@ export default function PointSystemPanel({ pointSystem, setPointSystem, killPts,
 
   const addRow = () => {
     if (!newPosition) return
-    const numVal = parseInt(newPosition)
     setPointSystem([...pointSystem, {
-      position: isNaN(numVal) ? newPosition : numVal,
+      position: toPosition(newPosition),
       points: parseInt(newPoints) || 0,
     }])
     setNewPosition('')
@@ -37,16 +44,16 @@ export default function PointSystemPanel({ pointSystem, setPointSystem, killPts,
   return (
     <div>
       <div className="card">
-        <h2>Point System Configuration</h2>
+        <h2>{t('pointSystemConfig')}</h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>
-          Configure how many points each position earns. Each kill is worth additional points.
+          {t('pointSystemDesc')}
         </p>
 
         <div className="point-system-grid">
           {pointSystem.map((entry, index) => (
             <div key={index} className="point-entry">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>POSITION</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('positionLabel')}</span>
                 <input
                   type="text"
                   value={entry.position}
@@ -55,7 +62,7 @@ export default function PointSystemPanel({ pointSystem, setPointSystem, killPts,
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>POINTS</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('pointsLabel')}</span>
                 <input
                   type="number"
                   min="0"
@@ -76,23 +83,23 @@ export default function PointSystemPanel({ pointSystem, setPointSystem, killPts,
 
         <div className="btn-group" style={{ marginTop: 16 }}>
           <button className="btn btn-primary btn-sm" onClick={() => setShowAddRow(!showAddRow)}>
-            + Add Position
+            {t('addPosition')}
           </button>
         </div>
 
         {showAddRow && (
           <div className="add-form" style={{ marginTop: 16 }}>
             <div className="form-group">
-              <label>Position (e.g. 9 or 9-20)</label>
+              <label>{t('positionExample')}</label>
               <input
                 type="text"
                 value={newPosition}
                 onChange={e => setNewPosition(e.target.value)}
-                placeholder="e.g. 9 or 9-20"
+                placeholder={t('positionExample')}
               />
             </div>
             <div className="form-group">
-              <label>Points</label>
+              <label>{t('points')}</label>
               <input
                 type="number"
                 min="0"
@@ -100,16 +107,16 @@ export default function PointSystemPanel({ pointSystem, setPointSystem, killPts,
                 onChange={e => setNewPoints(e.target.value)}
               />
             </div>
-            <button className="btn btn-primary" onClick={addRow}>Add</button>
+            <button className="btn btn-primary" onClick={addRow}>{t('add')}</button>
           </div>
         )}
       </div>
 
       <div className="card">
-        <h2>Kill Points</h2>
+        <h2>{t('killPoints')}</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <label style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-            Points per kill:
+            {t('pointsPerKill')}
           </label>
           <input
             type="number"
@@ -122,12 +129,12 @@ export default function PointSystemPanel({ pointSystem, setPointSystem, killPts,
       </div>
 
       <div className="card">
-        <h2>Points Summary</h2>
+        <h2>{t('pointsSummary')}</h2>
         <table>
           <thead>
             <tr>
-              <th>Position</th>
-              <th>Points Awarded</th>
+              <th>{t('position')}</th>
+              <th>{t('pointsAwarded')}</th>
             </tr>
           </thead>
           <tbody>
@@ -142,7 +149,7 @@ export default function PointSystemPanel({ pointSystem, setPointSystem, killPts,
               </tr>
             ))}
             <tr>
-              <td style={{ fontWeight: 600, color: 'var(--danger)' }}>Each Kill (Elimination)</td>
+              <td style={{ fontWeight: 600, color: 'var(--danger)' }}>{t('eachKill')}</td>
               <td><span className="total-cell">{killPts}</span></td>
             </tr>
           </tbody>

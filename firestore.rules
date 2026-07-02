@@ -2,9 +2,34 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each user can only read/write their own document
+    // Admin: must be the exact email AND verified (blocks unverified
+    // email/password accounts claiming the admin address)
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'ahmadhassouneh2017@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admin has full access to all user documents
+      allow read, write: if isAdmin();
+
+      // Users can read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Users can create their own document but CANNOT set protected fields
+      allow create: if request.auth != null && request.auth.uid == userId
+        && !request.resource.data.keys().hasAny(['subscription', 'banned']);
+
+      // Users can update their own document but CANNOT modify protected
+      // fields, and banned users cannot write at all
+      allow update: if request.auth != null && request.auth.uid == userId
+        && resource.data.get('banned', false) != true
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['subscription', 'banned']);
+
+      // Users CANNOT delete their own document
+      // (no delete rule = denied by default)
     }
 
     // Deny all other access

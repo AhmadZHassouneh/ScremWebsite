@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback } from 'react'
 import ImageUpload from './ImageUpload'
 import TeamAutocomplete from './TeamAutocomplete'
+import { useI18n } from '../i18n/index.jsx'
 
-export default function MatchPanel({ teams, matches, setMatches, pointSystem, getPositionPoints, killPts, apiKey }) {
+export default function MatchPanel({ teams, matches, setMatches, getPositionPoints, killPts, apiKey }) {
+  const { t } = useI18n()
   const [activeMatch, setActiveMatch] = useState(null)
   const [showUpload, setShowUpload] = useState(false)
   const [showAddTeam, setShowAddTeam] = useState(false)
@@ -10,8 +12,15 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
   const [manualPosition, setManualPosition] = useState('')
   const [manualPlayers, setManualPlayers] = useState([{ name: '', kills: 0 }])
 
+  // Next number after the highest existing "Match N" so deleting a middle
+  // match never creates duplicate names
+  const nextMatchNumber = () => {
+    const nums = matches.map(m => parseInt((m.name || '').match(/\d+$/)?.[0], 10) || 0)
+    return Math.max(matches.length, ...nums, 0) + 1
+  }
+
   const createNewMatch = () => {
-    const matchNum = matches.length + 1
+    const matchNum = nextMatchNumber()
     const newMatch = {
       id: Date.now(),
       name: `Match ${matchNum}`,
@@ -22,7 +31,6 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
   }
 
   const matchTeamFromGroup = (group) => {
-    // Try to match group's team name against known teams
     const groupName = (group.teamName || '').toLowerCase().replace(/[^a-z0-9]/g, '')
     if (!groupName) return null
 
@@ -48,10 +56,9 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
           kills: group.players.map(p => ({ player: p.name, count: p.kills })),
         }
       }
-      return null // duplicate
+      return null
     }
 
-    // Fallback: use extracted player names directly
     return {
       teamId: -(Date.now() + Math.random()),
       teamName: `Team #${group.position}`,
@@ -61,11 +68,9 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
   }
 
   const isDuplicateInMatch = (existingResults, newResult) => {
-    // Check by teamId
     if (newResult.teamId > 0 && existingResults.find(r => r.teamId === newResult.teamId)) {
       return true
     }
-    // Check by player name overlap
     return existingResults.some(r => {
       const existingNames = r.kills.map(k => k.player.toLowerCase().replace(/[^a-z0-9]/g, ''))
       const newNames = newResult.kills.map(k => k.player.toLowerCase().replace(/[^a-z0-9]/g, ''))
@@ -84,17 +89,14 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
     })
 
     if (activeMatch && currentMatch) {
-      // Add to existing match
       setMatches(matches.map(m => {
         if (m.id !== activeMatch) return m
         return { ...m, results: [...m.results, ...newResults] }
       }))
     } else {
-      // Create new match
-      const matchNum = matches.length + 1
       const newMatch = {
         id: Date.now(),
-        name: `Match ${matchNum}`,
+        name: `Match ${nextMatchNumber()}`,
         results: newResults,
       }
       setMatches([...matches, newMatch])
@@ -110,11 +112,9 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
     const pos = parseInt(manualPosition) || (Math.max(0, ...currentResults.map(r => r.position)) + 1)
     const players = manualPlayers.filter(p => p.name.trim())
 
-    // Check if a registered team matches the typed name
     const existingTeam = teams.find(t => t.name.toLowerCase() === manualTeamName.trim().toLowerCase())
     const teamId = existingTeam ? existingTeam.id : -(Date.now() + Math.random())
 
-    // Skip if already in match
     if (existingTeam && currentResults.find(r => r.teamId === existingTeam.id)) return
 
     setMatches(matches.map(m => {
@@ -145,7 +145,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
   }
 
   const deleteMatch = (id) => {
-    if (confirm('Delete this match?')) {
+    if (confirm(t('confirmDeleteMatch'))) {
       setMatches(matches.filter(m => m.id !== id))
       if (activeMatch === id) setActiveMatch(null)
     }
@@ -277,22 +277,22 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-        <h2 style={{ color: 'var(--primary)' }}>Matches ({matches.length})</h2>
+        <h2 style={{ color: 'var(--primary)' }}>{t('matchesCount', { count: matches.length })}</h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-primary" onClick={() => setShowUpload(!showUpload)}>
-            {showUpload ? 'Hide Upload' : 'Upload Screenshot'}
+            {showUpload ? t('hideUpload') : t('uploadScreenshot')}
           </button>
           <button className="btn btn-primary" onClick={createNewMatch}>
-            + New Match
+            {t('newMatch')}
           </button>
           {matches.length > 0 && (
             <button className="btn btn-danger" onClick={() => {
-              if (confirm('Delete all matches?')) {
+              if (confirm(t('confirmDeleteAllMatches'))) {
                 setMatches([])
                 setActiveMatch(null)
               }
             }}>
-              Delete All
+              {t('deleteAll')}
             </button>
           )}
         </div>
@@ -311,10 +311,10 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
               color: 'var(--primary)',
               fontWeight: 600,
             }}>
-              Teams will be added to: {currentMatch.name} (duplicates skipped)
+              {t('teamsAddedTo', { name: currentMatch.name })}
             </div>
           )}
-          <ImageUpload onDataExtracted={handleImageData} teams={teams} apiKey={apiKey} />
+          <ImageUpload onDataExtracted={handleImageData} apiKey={apiKey} />
         </div>
       )}
 
@@ -356,7 +356,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
       {currentMatch && (
         <div className="card">
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
-            <label style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Match Name:</label>
+            <label style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{t('matchName')}</label>
             <input
               type="text"
               value={currentMatch.name}
@@ -367,7 +367,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
               className="btn btn-sm btn-primary"
               onClick={() => setShowAddTeam(!showAddTeam)}
             >
-              {showAddTeam ? 'Cancel' : '+ Add Team'}
+              {showAddTeam ? t('cancel') : t('addTeam')}
             </button>
           </div>
 
@@ -381,7 +381,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
             }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
                 <div style={{ flex: 1, minWidth: 150 }}>
-                  <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>Team Name</label>
+                  <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>{t('teamName')}</label>
                   <div style={{ marginTop: 4 }}>
                     <TeamAutocomplete
                       teams={teams}
@@ -391,25 +391,25 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
                         if (team) setManualTeamName(team.name)
                       }}
                       excludeIds={(currentMatch?.results || []).map(r => r.teamId)}
-                      placeholder="Search or type team name"
+                      placeholder={t('searchOrTypeTeam')}
                     />
                   </div>
                 </div>
                 <div style={{ width: 80 }}>
-                  <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>Position</label>
+                  <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>{t('position')}</label>
                   <input
                     type="number"
                     min="1"
                     max="20"
                     value={manualPosition}
                     onChange={e => setManualPosition(e.target.value)}
-                    placeholder="Auto"
+                    placeholder={t('auto')}
                     style={{ width: '100%', marginTop: 4 }}
                   />
                 </div>
               </div>
 
-              <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>Players</label>
+              <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>{t('players')}</label>
               {manualPlayers.map((p, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', width: 20 }}>{i + 1}.</span>
@@ -421,10 +421,10 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
                       updated[i] = { ...updated[i], name: e.target.value }
                       setManualPlayers(updated)
                     }}
-                    placeholder="Player name"
+                    placeholder={t('playerName')}
                     style={{ flex: 1 }}
                   />
-                  <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Kills:</label>
+                  <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{t('kills')}</label>
                   <input
                     type="number"
                     min="0"
@@ -451,10 +451,10 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
                   <button
                     className="btn btn-sm btn-primary"
                     onClick={() => setManualPlayers([...manualPlayers, { name: '', kills: 0 }])}
-                  >+ Player</button>
+                  >{t('addPlayer')}</button>
                 )}
                 <button className="btn btn-primary btn-sm" onClick={addManualTeam} disabled={!manualTeamName.trim()}>
-                  Add Team
+                  {t('addTeamBtn')}
                 </button>
               </div>
             </div>
@@ -462,7 +462,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
 
           {currentMatch.results.length === 0 && (
             <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)' }}>
-              No teams yet. Upload screenshots or add teams manually.
+              {t('noTeamsYet')}
             </div>
           )}
 
@@ -471,13 +471,13 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
               <table>
                 <thead>
                   <tr>
-                    <th>Pos</th>
-                    <th>Team</th>
-                    <th>Position Pts</th>
-                    <th>Players & Kills</th>
-                    <th>Total Kills</th>
-                    <th>Kill Pts</th>
-                    <th>Total</th>
+                    <th>{t('pos')}</th>
+                    <th>{t('team')}</th>
+                    <th>{t('positionPts')}</th>
+                    <th>{t('playersAndKills')}</th>
+                    <th>{t('totalKills')}</th>
+                    <th>{t('killPts')}</th>
+                    <th>{t('total')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -485,7 +485,6 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
                   {[...currentMatch.results]
                     .sort((a, b) => a.position - b.position)
                     .map(result => {
-                      const team = teams.find(t => t.id === result.teamId)
                       const posPts = getPositionPoints(result.position)
                       const totalKills = getTeamTotalKills(result)
                       const killPointsVal = totalKills * killPts
@@ -534,7 +533,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
                                     type="text"
                                     value={kill.player}
                                     onChange={e => updatePlayerName(currentMatch.id, result.teamId, ki, e.target.value)}
-                                    placeholder="Player name"
+                                    placeholder={t('playerName')}
                                     style={{ flex: 1, minWidth: 80 }}
                                   />
                                   <input
@@ -555,7 +554,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
                                   className="btn btn-sm btn-primary"
                                   onClick={() => addPlayerToResult(currentMatch.id, result.teamId)}
                                   style={{ marginTop: 4, padding: '2px 8px', fontSize: '0.7rem' }}
-                                >+ Player</button>
+                                >{t('addPlayer')}</button>
                               )}
                             </div>
                           </td>
@@ -571,7 +570,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
                               className="btn btn-danger btn-sm"
                               onClick={() => removeTeamFromMatch(currentMatch.id, result.teamId)}
                               style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                            >Del</button>
+                            >{t('del')}</button>
                           </td>
                         </tr>
                       )
@@ -586,7 +585,7 @@ export default function MatchPanel({ teams, matches, setMatches, pointSystem, ge
       {matches.length === 0 && !showUpload && (
         <div className="card" style={{ textAlign: 'center', padding: 60 }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
-            No matches yet. Upload a screenshot or create a new match.
+            {t('noMatchesYet')}
           </p>
         </div>
       )}

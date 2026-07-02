@@ -486,3 +486,108 @@ input[type="number"] {
   color: var(--text-muted);
   text-transform: uppercase;
 }
+
+/* ===== SUBSCRIPTION PLANS ===== */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.plan-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  position: relative;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.plan-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.plan-card.plan-current {
+  border-color: var(--gold);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.15);
+}
+
+.plan-badge {
+  position: absolute;
+  top: -12px;
+  right: 20px;
+  background: var(--gold);
+  color: #0a0a0a;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.plan-card h3 {
+  color: var(--primary);
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.plan-price {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+
+.plan-period {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.plan-features {
+  list-style: none;
+  margin-bottom: 24px;
+}
+
+.plan-features li {
+  padding: 6px 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-features li:last-child {
+  border-bottom: none;
+}
+
+.plan-features li::before {
+  content: '\2713  ';
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ===== STATUS BADGES ===== */
+.status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-active {
+  background: rgba(0, 201, 167, 0.15);
+  color: var(--primary);
+}
+
+.status-none, .status-free {
+  background: rgba(136, 136, 136, 0.15);
+  color: var(--text-muted);
+}
+
+.status-canceled, .status-expired {
+  background: rgba(255, 71, 87, 0.15);
+  color: var(--danger);
+}

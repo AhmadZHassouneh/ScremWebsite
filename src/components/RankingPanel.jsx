@@ -1,4 +1,7 @@
+import { useI18n } from '../i18n/index.jsx'
+
 export default function RankingPanel({ rankings, matches }) {
+  const { t } = useI18n()
   const totalKills = rankings.reduce((sum, r) => sum + r.kills, 0)
   const totalMatches = matches.length
 
@@ -7,34 +10,34 @@ export default function RankingPanel({ rankings, matches }) {
       <div className="summary-boxes">
         <div className="summary-box">
           <div className="value">{rankings.length}</div>
-          <div className="label">Teams</div>
+          <div className="label">{t('teams')}</div>
         </div>
         <div className="summary-box">
           <div className="value">{totalMatches}</div>
-          <div className="label">Matches Played</div>
+          <div className="label">{t('matchesPlayed')}</div>
         </div>
         <div className="summary-box">
           <div className="value">{totalKills}</div>
-          <div className="label">Total Kills</div>
+          <div className="label">{t('totalKillsLabel')}</div>
         </div>
         <div className="summary-box">
           <div className="value">{rankings[0]?.total || 0}</div>
-          <div className="label">Highest Score</div>
+          <div className="label">{t('highestScore')}</div>
         </div>
       </div>
 
       <div className="card">
-        <h2>Overall Ranking</h2>
+        <h2>{t('overallRanking')}</h2>
         <div className="ranking-table">
           <table>
             <thead>
               <tr>
-                <th>#</th>
-                <th>Team</th>
-                <th>Wins</th>
-                <th>Position Pts</th>
-                <th>Kills</th>
-                <th>Total</th>
+                <th>{t('rank')}</th>
+                <th>{t('team')}</th>
+                <th>{t('wins')}</th>
+                <th>{t('positionPts')}</th>
+                <th>{t('totalKills')}</th>
+                <th>{t('total')}</th>
               </tr>
             </thead>
             <tbody>

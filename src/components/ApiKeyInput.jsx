@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useI18n } from '../i18n/index.jsx'
 
 export default function ApiKeyInput({ apiKey, setApiKey }) {
+  const { t } = useI18n()
   const [show, setShow] = useState(false)
   const [tempKey, setTempKey] = useState(apiKey)
 
@@ -22,30 +24,30 @@ export default function ApiKeyInput({ apiKey, setApiKey }) {
       flexWrap: 'wrap',
     }}>
       <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>
-        AI Vision (Google Gemini - Free):
+        {t('aiVisionLabel')}
       </span>
       {apiKey ? (
         <>
           <span style={{ color: 'var(--primary)', fontSize: '0.85rem' }}>
-            API Key set (...{apiKey.slice(-6)})
+            {t('apiKeySet', { suffix: apiKey.slice(-6) })}
           </span>
           <button className="btn btn-sm" style={{ background: 'var(--border)', color: 'var(--text)' }} onClick={() => { setShow(!show); setTempKey(apiKey) }}>
-            Change
+            {t('change')}
           </button>
           <button className="btn btn-sm btn-danger" onClick={() => setApiKey('')}>
-            Remove
+            {t('remove')}
           </button>
         </>
       ) : (
         <>
           <span style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
-            No API key. Get a free key from{' '}
+            {t('noApiKey')}{' '}
             <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style={{ color: 'var(--primary)' }}>
-              Google AI Studio
+              {t('googleAiStudio')}
             </a>
           </span>
           <button className="btn btn-sm btn-primary" onClick={() => setShow(!show)}>
-            Set Key
+            {t('setKey')}
           </button>
         </>
       )}
@@ -59,7 +61,7 @@ export default function ApiKeyInput({ apiKey, setApiKey }) {
             placeholder="AIza..."
             style={{ flex: 1 }}
           />
-          <button className="btn btn-primary btn-sm" onClick={save}>Save</button>
+          <button className="btn btn-primary btn-sm" onClick={save}>{t('save')}</button>
         </div>
       )}
     </div>

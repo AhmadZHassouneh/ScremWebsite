@@ -25,15 +25,15 @@ export default function RightSidebar({ selectedTeam, onUpdate }) {
   const update = (changes) => onUpdate(team.id, changes)
   const updateStyle = (changes) => onUpdate(team.id, { style: { ...style, ...changes } })
 
+  // Never revoke logoSrc here — duplicated teams share the same blob URL,
+  // so revoking would break the other copy and make saving fail
   const handleLogoUpload = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (team.logoSrc) URL.revokeObjectURL(team.logoSrc)
     update({ logoSrc: URL.createObjectURL(file) })
   }
 
   const removeLogo = () => {
-    if (team.logoSrc) URL.revokeObjectURL(team.logoSrc)
     update({ logoSrc: null })
   }
 

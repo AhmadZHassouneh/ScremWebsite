@@ -178,15 +178,16 @@ export async function analyzeTemplateLayoutWithAI(imageBase64, apiKey) {
 }
 
 async function callGemini(base64Data, imageBase64, apiKey, model, prompt) {
+  // Key goes in a header, not the URL, so it never lands in logs/history
   const urls = [
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`,
   ]
 
   let lastErr = null
   for (const url of urls) {
     try {
-      return await doFetch(url, base64Data, imageBase64, prompt)
+      return await doFetch(url, base64Data, imageBase64, prompt, apiKey)
     } catch (err) {
       lastErr = err
       if (err.message.includes('not found') || err.message.includes('not supported')) continue
@@ -226,7 +227,7 @@ function tryRepairJSON(str) {
   }
 }
 
-async function doFetch(url, base64Data, imageBase64, prompt) {
+async function doFetch(url, base64Data, imageBase64, prompt, apiKey) {
   const mimeType = imageBase64.includes('image/png') ? 'image/png' :
     imageBase64.includes('image/webp') ? 'image/webp' : 'image/jpeg'
 
@@ -242,7 +243,7 @@ async function doFetch(url, base64Data, imageBase64, prompt) {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
       contents: [
         {

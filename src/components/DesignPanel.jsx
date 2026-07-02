@@ -302,7 +302,7 @@ export default function DesignPanel({ rankings, apiKey }) {
           const logoSize = cp.h / 100 * imgH * 0.75
           const logoX = (cp.logo.x + cp.logo.w / 2) / 100 * imgW - logoSize / 2
           ctx.drawImage(logoImg, logoX, midY - logoSize / 2, logoSize, logoSize)
-        } catch {}
+        } catch { /* logo failed to load — skip it */ }
       }
 
       // Team name
@@ -396,23 +396,17 @@ export default function DesignPanel({ rankings, apiKey }) {
     const from = dragRowRef.current
     const to = dragOverRowRef.current
     if (from === null || to === null || from === to) return
+    // Only the data rows move — cellPositions stay fixed to the template
+    // slots so rank #1 is always drawn in the first slot
     setRows(prev => {
       const updated = [...prev]
       const [moved] = updated.splice(from, 1)
       updated.splice(to, 0, moved)
       return updated
     })
-    if (cellPositions) {
-      setCellPositions(prev => {
-        const updated = [...prev]
-        const [moved] = updated.splice(from, 1)
-        updated.splice(to, 0, moved)
-        return updated
-      })
-    }
     dragRowRef.current = null
     dragOverRowRef.current = null
-  }, [cellPositions])
+  }, [])
 
   const renderDataInputRow = (row, i) => (
     <div

@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback } from 'react'
 import TeamImageUpload from './TeamImageUpload'
+import { useI18n } from '../i18n/index.jsx'
 
 export default function TeamsPanel({ teams, setTeams, apiKey }) {
+  const { t } = useI18n()
   const [editingTeam, setEditingTeam] = useState(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
@@ -17,7 +19,7 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
   }
 
   const handleDeleteTeam = (id) => {
-    if (confirm('Are you sure you want to delete this team?')) {
+    if (confirm(t('confirmDeleteTeam'))) {
       setTeams(teams.filter(t => t.id !== id))
     }
   }
@@ -81,21 +83,21 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-        <h2 style={{ color: 'var(--primary)' }}>Teams ({teams.length})</h2>
+        <h2 style={{ color: 'var(--primary)' }}>{t('teamsCount', { count: teams.length })}</h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-primary" onClick={() => { setShowUpload(!showUpload); setShowAddForm(false) }}>
-            {showUpload ? 'Hide Upload' : 'Upload Screenshot'}
+            {showUpload ? t('hideUpload') : t('uploadScreenshot')}
           </button>
           <button className="btn btn-primary" onClick={() => { setShowAddForm(!showAddForm); setShowUpload(false) }}>
-            {showAddForm ? 'Cancel' : '+ Add Team'}
+            {showAddForm ? t('cancel') : t('addTeam')}
           </button>
           {teams.length > 0 && (
             <button className="btn btn-danger" onClick={() => {
-              if (confirm('Delete all teams?')) {
+              if (confirm(t('confirmDeleteAllTeams'))) {
                 setTeams([])
               }
             }}>
-              Delete All
+              {t('deleteAll')}
             </button>
           )}
         </div>
@@ -109,19 +111,19 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
 
       {showAddForm && (
         <div className="card" style={{ marginBottom: 20 }}>
-          <h2>Add New Team</h2>
+          <h2>{t('addNewTeam')}</h2>
           <div className="add-form" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
             <div className="form-group">
-              <label>Team Name</label>
+              <label>{t('teamName')}</label>
               <input
                 type="text"
                 value={newTeamName}
                 onChange={e => setNewTeamName(e.target.value)}
-                placeholder="Enter team name"
+                placeholder={t('enterTeamName')}
               />
             </div>
             <div className="btn-group">
-              <button className="btn btn-primary" onClick={handleAddTeam}>Save Team</button>
+              <button className="btn btn-primary" onClick={handleAddTeam}>{t('saveTeam')}</button>
             </div>
           </div>
         </div>
@@ -144,8 +146,8 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
                 {team.name}
               </span>
               <span style={{ display: 'flex', gap: 6 }}>
-                <button className="btn btn-sm btn-primary" onClick={() => handleEditTeam(team)}>Edit</button>
-                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTeam(team.id)}>Del</button>
+                <button className="btn btn-sm btn-primary" onClick={() => handleEditTeam(team)}>{t('edit')}</button>
+                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTeam(team.id)}>{t('del')}</button>
               </span>
             </h3>
           </div>
@@ -155,9 +157,9 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
       {editingTeam && (
         <div className="modal-overlay" onClick={() => setEditingTeam(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2>Edit Team</h2>
+            <h2>{t('editTeam')}</h2>
             <div className="form-group">
-              <label>Team Name</label>
+              <label>{t('teamName')}</label>
               <input
                 type="text"
                 value={editingTeam.name}
@@ -165,8 +167,8 @@ export default function TeamsPanel({ teams, setTeams, apiKey }) {
               />
             </div>
             <div className="btn-group">
-              <button className="btn btn-primary" onClick={handleSaveEdit}>Save</button>
-              <button className="btn btn-sm" style={{ background: 'var(--border)', color: 'var(--text)' }} onClick={() => setEditingTeam(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveEdit}>{t('save')}</button>
+              <button className="btn btn-sm" style={{ background: 'var(--border)', color: 'var(--text)' }} onClick={() => setEditingTeam(null)}>{t('cancel')}</button>
             </div>
           </div>
         </div>
