@@ -219,8 +219,11 @@ async function handleEvent(event, env, projectId, token) {
   const data = event.data || {}
 
   switch (event.event_type) {
-    // Checkout completed (or a paused/canceled subscription resumed)
+    // Checkout completed (or a paused/canceled subscription resumed).
+    // subscription.trialing counts too: a trial user gets Pro, and if the
+    // trial converts, activated/updated events keep the record current.
     case 'subscription.activated':
+    case 'subscription.trialing':
     case 'subscription.resumed': {
       const target = await resolveTarget(projectId, token, data)
       if (!target) break

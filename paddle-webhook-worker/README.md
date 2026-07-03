@@ -23,8 +23,9 @@ Set with `npx wrangler secret put NAME` from this directory:
    $48 yearly). Note the two `pri_...` ids.
 2. Developer tools → Notifications → new destination:
    - URL: `https://screm-paddle-webhook.scremwebsite.workers.dev`
-   - Events: `subscription.activated`, `subscription.updated`,
-     `subscription.resumed`, `subscription.canceled`, `subscription.past_due`
+   - Events: `subscription.activated`, `subscription.trialing`,
+     `subscription.updated`, `subscription.resumed`, `subscription.canceled`,
+     `subscription.past_due`
    - Copy the endpoint secret key into `PADDLE_WEBHOOK_SECRET`.
 3. Developer tools → Authentication → create a client-side token; put it in the
    site's `.env` as `VITE_PADDLE_CLIENT_TOKEN` together with the price ids.
@@ -35,7 +36,7 @@ Set with `npx wrangler secret put NAME` from this directory:
 
 | Paddle event | subscription fields written |
 | --- | --- |
-| `subscription.activated` / `resumed` | whole map: plan, status `active`, paddleCustomerId, paddleSubscriptionId, currentPeriodEnd |
+| `subscription.activated` / `trialing` / `resumed` | whole map: plan, status `active`, paddleCustomerId, paddleSubscriptionId, currentPeriodEnd |
 | `subscription.updated` | plan/status/currentPeriodEnd (scheduled cancel → status `canceled`, Pro kept until period end by the client) |
 | `subscription.canceled` | plan `free`, status `expired` |
 | `subscription.past_due` | status `past_due` |
