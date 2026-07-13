@@ -110,10 +110,13 @@ Rules:
 - Look at the actual cell borders, lines, and boundaries in the image to get precise measurements
 - Return ONLY valid JSON, no markdown, no backticks`
 
-// Models to try in order (free tier fallbacks)
+// Models to try in order (free tier fallbacks).
+// Gemini 2.x was retired mid-2026; gemini-3.5-flash is Google's designated
+// replacement, with 3-flash-preview and 3.1-flash-lite as free-tier fallbacks.
 const MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
+  'gemini-3.5-flash',
+  'gemini-3-flash-preview',
+  'gemini-3.1-flash-lite',
 ]
 
 const MAX_RETRIES = 3
@@ -146,7 +149,10 @@ async function callWithRetry(base64Data, imageBase64, apiKey, prompt) {
           continue
         }
 
-        if (msg.includes('not found') || msg.includes('not supported')) {
+        // Model unavailable (missing, retired, or restricted) — try the next one
+        if (msg.includes('not found') || msg.includes('not supported') ||
+          msg.includes('no longer available') || msg.includes('deprecated') ||
+          msg.includes('retired')) {
           break
         }
 
@@ -231,14 +237,17 @@ async function doFetch(url, base64Data, imageBase64, prompt, apiKey) {
   const mimeType = imageBase64.includes('image/png') ? 'image/png' :
     imageBase64.includes('image/webp') ? 'image/webp' : 'image/jpeg'
 
-  const generationConfig = {
-    temperature: 0,
-    maxOutputTokens: 8192,
-  }
-
-  // Enable thinking for gemini-2.5 models for better accuracy
-  if (url.includes('gemini-2.5')) {
-    generationConfig.thinkingConfig = { thinkingBudget: 10000 }
+  // Gemini 3 models run on API defaults: temperature must stay at 1.0 (lower
+  // values can cause looping/degraded output) and thinking defaults to high,
+  // which suits OCR accuracy. Legacy tuning kept in case a 2.x model returns.
+  const generationConfig = {}
+  if (/gemini-[12]\./.test(url)) {
+    generationConfig.temperature = 0
+    generationConfig.maxOutputTokens = 8192
+    // Enable thinking for gemini-2.5 models for better accuracy
+    if (url.includes('gemini-2.5')) {
+      generationConfig.thinkingConfig = { thinkingBudget: 10000 }
+    }
   }
 
   const response = await fetch(url, {
